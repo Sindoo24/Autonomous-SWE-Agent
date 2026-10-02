@@ -1,0 +1,13 @@
+diff --git a/inventory_service/pricing.py b/inventory_service/pricing.py
+index 9e361a8..8ec3287 100644
+--- a/inventory_service/pricing.py
++++ b/inventory_service/pricing.py
+@@ -60,7 +60,7 @@ def price_line(sku: str, unit_price: Decimal, quantity: int, promo: int = 0) ->
+     """Price one order line. Volume and promotion discounts do not stack; the larger wins."""
+     percent = max(volume_percent(quantity), promo)
+     subtotal = round_money(unit_price * quantity)
+-    discount = round_money(percent_of(subtotal, percent))
++    discount = round_money(percent_of(unit_price, percent)) * quantity
+     return QuoteLine(
+         sku=sku,
+         quantity=quantity,

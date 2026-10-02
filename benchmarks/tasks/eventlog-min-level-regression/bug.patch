@@ -1,0 +1,23 @@
+diff --git a/eventlog/filters.py b/eventlog/filters.py
+index e87a736..26cb80d 100644
+--- a/eventlog/filters.py
++++ b/eventlog/filters.py
+@@ -6,15 +6,15 @@ import re
+ from datetime import datetime
+ from typing import Any, Callable, Iterable, Optional
+ 
+-from eventlog.events import Event, level_rank
++from eventlog.events import Event, normalize_level
+ 
+ Predicate = Callable[[Event], bool]
+ 
+ 
+ def min_level(level: str) -> Predicate:
+     """Keep events at ``level`` or more severe (``min_level("warn")`` keeps ERROR too)."""
+-    threshold = level_rank(level)
+-    return lambda event: event.severity >= threshold
++    threshold = normalize_level(level)
++    return lambda event: event.level >= threshold
+ 
+ 
+ def from_sources(sources: Iterable[str]) -> Predicate:

@@ -1,0 +1,13 @@
+diff --git a/ledger_cli/parser.py b/ledger_cli/parser.py
+index edf0439..edac5a5 100644
+--- a/ledger_cli/parser.py
++++ b/ledger_cli/parser.py
+@@ -62,7 +62,7 @@ class Entry:
+ 
+ def _parse_tag(token: str) -> str:
+     """Turn ``#Food`` into ``food``; tags are case-insensitive."""
+-    tag = token[1:].strip().lower()
++    tag = token[1:].strip()
+     if not tag or not _TAG_PATTERN.match(tag):
+         raise ValueError(f"invalid tag {token!r}")
+     return tag

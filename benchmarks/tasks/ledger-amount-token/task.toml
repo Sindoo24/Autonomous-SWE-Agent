@@ -1,0 +1,25 @@
+id = "ledger-amount-token"
+repo = "ledger_cli"
+category = "regression_bug"
+difficulty = "hard"
+injection = "commit"
+commit_message = "Parse ledger lines in a single pass over tokens"
+issue = """Balances are way off after updating to the latest version.
+
+My March ledger:
+
+    2024-03-01 rent for 2 months -1800.00 #housing
+    2024-03-02 salary 3000.00 #income
+    2024-03-05 dinner for 4 -120.00 #food
+
+    $ python -m ledger_cli march.ledger balance
+    account      balance
+    --------  ---------
+    checking  $3,006.00
+    total     $3,006.00
+
+The total should be $1,080.00. `categories` for the same file no longer lists `housing` or `food`
+at all (it prints only the header). The same file produced the right numbers with the previous
+release, and ledgers whose descriptions contain no numbers still look fine."""
+expected_behavior = "The amount of a ledger line is its last non-tag, non-account token; numbers appearing inside the description stay part of the description. Balances and reports use that amount."
+visible_failing = []

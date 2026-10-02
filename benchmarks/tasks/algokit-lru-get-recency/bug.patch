@@ -1,0 +1,20 @@
+diff --git a/algokit/cache.py b/algokit/cache.py
+index e356fa3..d5ebe20 100644
+--- a/algokit/cache.py
++++ b/algokit/cache.py
+@@ -26,12 +26,12 @@ class LRUCache:
+ 
+     def get(self, key: Hashable, default: Any = None) -> Any:
+         """Return the cached value for ``key`` (refreshing its recency) or ``default``."""
+-        if key not in self._data:
++        value = self._data.get(key, _MISSING)
++        if value is _MISSING:
+             self.misses += 1
+             return default
+         self.hits += 1
+-        self._data.move_to_end(key)
+-        return self._data[key]
++        return value
+ 
+     def put(self, key: Hashable, value: Any) -> None:
+         """Insert or update ``key``, evicting the least recently used entries if needed."""

@@ -1,0 +1,21 @@
+id = "algokit-lru-get-recency"
+repo = "algokit"
+category = "regression_bug"
+difficulty = "medium"
+injection = "commit"
+commit_message = "Avoid double dictionary lookup in LRUCache.get"
+issue = """LRUCache evicts entries that were just read.
+
+    cache = LRUCache(2)
+    cache.put("a", 1)
+    cache.put("b", 2)
+    cache.get("a")        # -> 1
+    cache.put("c", 3)
+    "a" in cache          # -> False, expected True
+    cache.keys()          # -> ['b', 'c'], expected ['a', 'c']
+
+Reading a key should make it the most recently used one, so "b" should have been evicted.
+This used to work; functions decorated with lru_memoize are now recomputing hot values much
+more often than before."""
+expected_behavior = "A successful LRUCache.get marks the key as most recently used (so it is evicted last); hit/miss statistics and peek() behave as before."
+visible_failing = ["tests/test_cache.py::test_get_refreshes_recency"]

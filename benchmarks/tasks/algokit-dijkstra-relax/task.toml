@@ -1,0 +1,16 @@
+id = "algokit-dijkstra-relax"
+repo = "algokit"
+category = "algorithmic_bug"
+difficulty = "medium"
+injection = "squashed"
+issue = """dijkstra / shortest_path sometimes return a route that is not the cheapest one.
+
+    graph = {"a": [("b", 10), ("c", 1)], "c": [("b", 2)], "b": [("d", 1)], "d": []}
+    shortest_path(graph, "a", "d")
+
+returns (11, ['a', 'b', 'd']), but going a -> c -> b -> d costs only 1 + 2 + 1 = 4, so the
+expected result is (4, ['a', 'c', 'b', 'd']). dijkstra(graph, "a")[0]["b"] likewise reports 10
+instead of 3. It seems to happen when the first edge found to a node is not the cheapest way
+to reach it."""
+expected_behavior = "dijkstra returns true minimum distances (and matching predecessors) for graphs with non-negative weights; shortest_path returns the cheapest path and its cost."
+visible_failing = []

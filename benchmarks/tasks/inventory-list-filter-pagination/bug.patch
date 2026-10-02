@@ -1,0 +1,17 @@
+diff --git a/inventory_service/api.py b/inventory_service/api.py
+index 5104c2f..63acdd2 100644
+--- a/inventory_service/api.py
++++ b/inventory_service/api.py
+@@ -136,10 +136,9 @@ def _list_products(query: dict[str, str]) -> tuple[int, dict[str, Any]]:
+     sort_key, descending = _sort_param(query)
+     keep = _product_filter(query)
+ 
+-    matching = [p for p in store.list_products() if keep(p)]
+-    matching.sort(key=sort_key, reverse=descending)
++    matching = sorted(store.list_products(), key=sort_key, reverse=descending)
+     start = (page - 1) * page_size
+-    window = matching[start : start + page_size]
++    window = [p for p in matching[start : start + page_size] if keep(p)]
+     return 200, {
+         "items": [p.to_dict() for p in window],
+         "total": len(matching),

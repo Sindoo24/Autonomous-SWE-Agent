@@ -1,0 +1,25 @@
+id = "ledger-tag-case"
+repo = "ledger_cli"
+category = "logic_bug"
+difficulty = "medium"
+injection = "squashed"
+issue = """The categories report splits the same category into several rows depending on how the tag
+was typed.
+
+    2024-01-05 groceries -42.50 #food
+    2024-01-12 bakery -8.00 #Food
+    2024-01-20 market -10.00 #FOOD
+
+`python -m ledger_cli jan.ledger categories` prints
+
+    category   total
+    --------  ------
+    food      $42.50
+    FOOD      $10.00
+    Food       $8.00
+
+Tags are documented as case-insensitive, so this should be a single `food` row with $60.50.
+The `register` command also shows `Food` / `FOOD` as the category for those lines instead of
+`food`."""
+expected_behavior = "Tags are case-insensitive: they are normalised to lower case, duplicates differing only in case collapse, and category totals group them together."
+visible_failing = []

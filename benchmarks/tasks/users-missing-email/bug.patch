@@ -1,0 +1,14 @@
+--- a/users_service/api.py
++++ b/users_service/api.py
+@@ -23,10 +23,7 @@
+     name = payload.get("name")
+     if not name:
+         raise ValidationError("name", "name is required")
+-    email = payload.get("email")
+-    if not email:
+-        raise ValidationError("email", "email is required")
+-    email = normalize_email(email)
++    email = normalize_email(payload["email"])
+     user = store.add(name=name, email=email)
+     return 201, {"id": user.id, "name": user.name, "email": user.email}
+ 

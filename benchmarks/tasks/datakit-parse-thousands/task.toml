@@ -1,0 +1,9 @@
+id = "datakit-parse-thousands"
+repo = "datakit"
+category = "data_processing_bug"
+difficulty = "easy"
+injection = "squashed"
+issue = """parse_amount raises ParseError for amounts that use thousands separators, e.g.
+parse_amount("1,234.50"). Exported bank statements always use them."""
+expected_behavior = "Thousands separators are ignored, including inside accounting parentheses."
+visible_failing = []

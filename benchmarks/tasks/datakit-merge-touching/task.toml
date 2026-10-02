@@ -1,0 +1,10 @@
+id = "datakit-merge-touching"
+repo = "datakit"
+category = "algorithmic_bug"
+difficulty = "medium"
+injection = "squashed"
+issue = """merge_intervals does not merge intervals that touch at an endpoint.
+merge_intervals([(1, 2), (2, 3)]) returns [(1, 2), (2, 3)] but the docstring says touching
+closed intervals are merged, so it should return [(1, 3)]."""
+expected_behavior = "Closed intervals sharing an endpoint are merged; other behaviour unchanged."
+visible_failing = []

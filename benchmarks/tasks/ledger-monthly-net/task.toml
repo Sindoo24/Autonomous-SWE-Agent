@@ -1,0 +1,23 @@
+id = "ledger-monthly-net"
+repo = "ledger_cli"
+category = "logic_bug"
+difficulty = "easy"
+injection = "squashed"
+issue = """`ledger FILE monthly` shows the wrong net for every month that has spending.
+
+With this ledger:
+
+    2024-01-02 salary 3000.00 #income
+    2024-01-05 groceries -42.50 #food
+    2024-01-09 cinema -24.00 #fun
+
+`python -m ledger_cli household.ledger monthly` prints
+
+    month       income  expenses        net
+    -------  ---------  --------  ---------
+    2024-01  $3,000.00    $66.50  $3,066.50
+
+The income and expenses columns are right, but net should be income minus expenses:
+$2,933.50. Months without any spending look correct."""
+expected_behavior = "Each monthly summary row has net == income - expenses (expenses being a positive magnitude); the monthly command prints that value."
+visible_failing = []

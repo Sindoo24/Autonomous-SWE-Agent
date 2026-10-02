@@ -1,0 +1,16 @@
+diff --git a/ledger_cli/accounts.py b/ledger_cli/accounts.py
+index 209d825..64bd1eb 100644
+--- a/ledger_cli/accounts.py
++++ b/ledger_cli/accounts.py
+@@ -27,10 +27,7 @@ def month_bounds(month: str) -> Tuple[date, date]:
+     if not 1 <= mon <= 12:
+         raise ValueError(f"month out of range: {month!r}")
+     first = date(year, mon, 1)
+-    if mon == 12:
+-        following = date(year + 1, 1, 1)
+-    else:
+-        following = date(year, mon + 1, 1)
++    following = date(year, mon % 12 + 1, 1)
+     return first, following - timedelta(days=1)
+ 
+ 

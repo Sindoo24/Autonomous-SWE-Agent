@@ -1,0 +1,15 @@
+id = "algokit-window-full-length"
+repo = "algokit"
+category = "edge_case"
+difficulty = "easy"
+injection = "squashed"
+issue = """max_window_sum raises when the window covers the whole sequence.
+
+    >>> from algokit.sequences import max_window_sum
+    >>> max_window_sum([1, 2, 3], 3)
+    ValueError: window size 3 exceeds sequence length 3
+
+A window of size 3 fits exactly into a list of length 3, so this should return 6. The same
+happens for max_window_sum([7], 1), which should return 7."""
+expected_behavior = "max_window_sum accepts 1 <= k <= len(values) (k == len(values) returns the total) and still raises ValueError for k <= 0 or k > len(values)."
+visible_failing = []

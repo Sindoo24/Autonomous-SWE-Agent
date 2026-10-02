@@ -1,0 +1,19 @@
+id = "algokit-lis-duplicates"
+repo = "algokit"
+category = "algorithmic_bug"
+difficulty = "hard"
+injection = "squashed"
+issue = """longest_increasing_subsequence returns sequences that are not strictly increasing when the
+input contains repeated values.
+
+    >>> from algokit.sequences import longest_increasing_subsequence, lis_length
+    >>> longest_increasing_subsequence([1, 2, 2, 3])
+    [1, 2, 2, 3]
+    >>> lis_length([5, 5, 5, 5])
+    4
+
+The docstring promises a *strictly* increasing subsequence, so these should be [1, 2, 3] and 1.
+Inputs without duplicates look fine. We also noticed count_in_range([1, 2, 2, 2, 3], 2, 2)
+returning 0 instead of 3, which may or may not be related."""
+expected_behavior = "longest_increasing_subsequence returns a longest strictly increasing subsequence even with repeated values; lis_length matches; counting helpers handle duplicates correctly."
+visible_failing = []

@@ -1,0 +1,13 @@
+diff --git a/algokit/scheduling.py b/algokit/scheduling.py
+index 5044e4d..a3a88b2 100644
+--- a/algokit/scheduling.py
++++ b/algokit/scheduling.py
+@@ -35,7 +35,7 @@ def max_non_overlapping(intervals: Sequence[Interval]) -> List[Interval]:
+     _validate(intervals)
+     chosen: List[Interval] = []
+     last_end = float("-inf")
+-    for start, end in sorted(intervals, key=lambda iv: (iv[1], iv[0])):
++    for start, end in sorted(intervals, key=lambda iv: (iv[0], iv[1])):
+         if start >= last_end:
+             chosen.append((start, end))
+             last_end = end

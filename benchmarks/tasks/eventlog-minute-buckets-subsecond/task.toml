@@ -1,0 +1,20 @@
+id = "eventlog-minute-buckets-subsecond"
+repo = "eventlog"
+category = "data_processing_bug"
+difficulty = "easy"
+injection = "squashed"
+issue = """The per-minute counts in the pipeline report split a single minute into several buckets when
+timestamps carry fractional seconds.
+
+    lines = [
+        "2024-05-01T12:00:01.250Z INFO [api] a",
+        "2024-05-01T12:00:30Z INFO [api] b",
+        "2024-05-01T12:00:59.900Z INFO [api] c",
+    ]
+    >>> print(report_to_json(run_pipeline(lines)["per_minute"]))
+    {"2024-05-01T12:00:00Z": 1, "2024-05-01T12:00:00.250Z": 1, "2024-05-01T12:00:00.900Z": 1}
+
+Expected a single bucket {"2024-05-01T12:00:00Z": 3}. Logs from services that write whole
+seconds look fine."""
+expected_behavior = """per_minute groups events by the start of their calendar minute regardless of sub-second precision; bucket keys are whole minutes."""
+visible_failing = []

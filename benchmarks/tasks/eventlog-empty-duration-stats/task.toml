@@ -1,0 +1,18 @@
+id = "eventlog-empty-duration-stats"
+repo = "eventlog"
+category = "edge_case"
+difficulty = "medium"
+injection = "squashed"
+issue = """run_pipeline crashes with IndexError when no selected event has a duration.
+
+    >>> run_pipeline(lines, sources=["billing"])   # nothing in the log comes from billing
+    Traceback (most recent call last):
+      ...
+    IndexError: list index out of range
+
+The same happens for a log where no line has `duration=`/`duration_ms`, e.g.
+run_pipeline(["2024-05-01T12:00:00Z INFO [api] started"]). Expected a normal report: for an empty
+selection `events == 0`, and in both cases `durations` has count 0 and None for
+min/mean/p50/p95/p99/max."""
+expected_behavior = """Duration statistics and percentiles handle an empty set of durations by returning count 0 and None values instead of raising."""
+visible_failing = []

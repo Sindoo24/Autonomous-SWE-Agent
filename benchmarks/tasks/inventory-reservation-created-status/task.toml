@@ -1,0 +1,17 @@
+id = "inventory-reservation-created-status"
+repo = "inventory_api"
+category = "api_bug"
+difficulty = "easy"
+injection = "squashed"
+issue = """POST /products/{sku}/reservations answers 200 OK when it creates a new reservation.
+
+Every other create endpoint (e.g. POST /products) answers 201 Created, and our client library
+relies on 201 to know a new reservation id was allocated.
+
+    >>> api.post_products({"sku": "TLS-0001", "name": "Hammer", "price": "12.50", "on_hand": 40})
+    >>> api.post_reservation("TLS-0001", {"quantity": 2, "customer": "ACME Ltd"})
+    (200, {'id': 1, 'sku': 'TLS-0001', 'quantity': 2, 'customer': 'ACME Ltd', 'status': 'active'})
+
+Expected status 201 with the same body."""
+expected_behavior = """A successful POST /products/{sku}/reservations returns 201 with the reservation body; error responses are unchanged."""
+visible_failing = []

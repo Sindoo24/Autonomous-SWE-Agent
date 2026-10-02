@@ -1,0 +1,14 @@
+# First real-model experiment: 3 easy tasks, each system once. Checks the whole pipeline
+# (queue, worker, sandbox, held-out evaluation, report) before committing to the big runs.
+name = "smoke"
+tasks = ["users-missing-email", "algokit-greedy-schedule", "eventlog-minute-buckets-subsecond"]
+repeats = 1
+
+[[systems]]
+system = "agent"
+
+[[systems]]
+system = "baseline_react"
+
+[[systems]]
+system = "baseline_single_shot"

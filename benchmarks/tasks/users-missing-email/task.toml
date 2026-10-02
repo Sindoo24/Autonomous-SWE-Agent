@@ -1,0 +1,9 @@
+id = "users-missing-email"
+repo = "users_api"
+category = "validation_bug"
+difficulty = "easy"
+injection = "squashed"  # bug is part of the initial commit (no history to diff against)
+issue = """POST /users returns HTTP 500 when the email field is missing from the payload.
+It should return 422 with a validation error that names the `email` field."""
+expected_behavior = "post_users without email (or with an empty email) returns 422 and field == 'email'."
+visible_failing = []

@@ -1,0 +1,130 @@
+# Full stack: PostgreSQL, API (backend), job worker, Streamlit UI; Jaeger as an optional profile.
+#
+#   cp .env.example .env        # then set SWE_API_KEY, SWE_DATA_DIR (absolute path), DOCKER_GID
+#   docker compose up -d --build
+#   docker compose --profile jaeger up -d     # + trace viewer (set SWE_OTEL_EXPORTER=otlp)
+#
+# UI http://localhost:8501 · API http://localhost:8000/docs · all ports bound to localhost.
+#
+# SECURITY: the worker mounts the host's Docker socket so it can start sandbox containers.
+# Access to that socket is equivalent to root on the host, so the worker container must be
+# treated as trusted. Model-written code never runs in the worker: it runs only in the
+# hardened sandbox containers the worker starts (--network none, read-only root, no
+# capabilities, unprivileged user, resource limits, no socket). See README "Sandbox security".
+
+x-backend-env: &backend-env
+  SWE_DATABASE_URL: postgresql://swe:${POSTGRES_PASSWORD:-swe}@postgres:5432/swe_agent
+  SWE_API_KEY: ${SWE_API_KEY:?set SWE_API_KEY in .env}
+  SWE_API_REPO_ROOTS: /repos
+  # The Docker daemon resolves sandbox bind mounts on the HOST, so workspaces and artifacts
+  # live under the same absolute path inside the containers and on the host.
+  SWE_WORKSPACE_ROOT: ${SWE_DATA_DIR:?set SWE_DATA_DIR in .env (absolute path)}/workspaces
+  SWE_ARTIFACTS_ROOT: ${SWE_DATA_DIR}/artifacts
+  SWE_CHECKPOINT_DB: ${SWE_DATA_DIR}/checkpoints.sqlite
+  TMPDIR: ${SWE_DATA_DIR}/tmp
+  MODEL_BASE_URL: ${MODEL_BASE_URL_DOCKER:-http://host.docker.internal:11434}
+  SWE_OTEL_ENDPOINT: ${SWE_OTEL_ENDPOINT_DOCKER:-http://jaeger:4318/v1/traces}
+
+x-backend-build: &backend-build
+  context: .
+  dockerfile: backend/Dockerfile
+  args:
+    PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.12-slim}
+    DOCKER_CLI_IMAGE: ${DOCKER_CLI_IMAGE:-docker:28-cli}
+
+x-backend-volumes: &backend-volumes
+  - ${SWE_DATA_DIR}:${SWE_DATA_DIR}
+  - ${SWE_REPOS_DIR:-./benchmarks/repos}:/repos:ro
+
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
+    environment:
+      POSTGRES_USER: swe
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-swe}
+      POSTGRES_DB: swe_agent
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"   # localhost only (CLI / experiments on the host)
+    volumes:
+      - swe-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U swe -d swe_agent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  backend:
+    build:
+      <<: *backend-build
+      target: api
+    image: swe-agent-api
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      <<: *backend-env
+      # The API never starts sandboxes (the worker does), so /ready does not check Docker here.
+      SANDBOX_ENABLED: "false"
+    user: "${SWE_UID:-10001}:${SWE_GID:-10001}"
+    volumes: *backend-volumes
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # Ollama on the host (Linux; built in on Desktop)
+    ports:
+      - "127.0.0.1:${SWE_API_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build:
+      <<: *backend-build
+      target: worker
+    image: swe-agent-worker
+    env_file:
+      - path: .env
+        required: false
+    environment: *backend-env
+    user: "${SWE_UID:-10001}:${SWE_GID:-10001}"
+    group_add:
+      - "${DOCKER_GID:-0}"   # group owning /var/run/docker.sock: stat -c %g /var/run/docker.sock
+    volumes:
+      - ${SWE_DATA_DIR}:${SWE_DATA_DIR}
+      - ${SWE_REPOS_DIR:-./benchmarks/repos}:/repos:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      backend:
+        condition: service_healthy   # the API applies the migrations on start
+    command: ["sh", "-c", "mkdir -p \"$$TMPDIR\" && exec swe-agent worker"]
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: frontend
+      args:
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.12-slim}
+    image: swe-agent-frontend
+    environment:
+      SWE_API_URL: http://backend:8000
+      SWE_API_KEY: ${SWE_API_KEY}
+    ports:
+      - "127.0.0.1:${SWE_UI_PORT:-8501}:8501"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  jaeger:
+    profiles: ["jaeger"]
+    image: jaegertracing/all-in-one:1.62.0
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "127.0.0.1:16686:16686"  # UI
+      - "127.0.0.1:4318:4318"    # OTLP/HTTP (from the host)
+
+volumes:
+  swe-pgdata:

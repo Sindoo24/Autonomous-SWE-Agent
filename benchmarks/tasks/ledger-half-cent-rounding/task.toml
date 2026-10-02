@@ -1,0 +1,24 @@
+id = "ledger-half-cent-rounding"
+repo = "ledger_cli"
+category = "logic_bug"
+difficulty = "hard"
+injection = "squashed"
+issue = """`summary` reports an average monthly spending that is one cent too low.
+
+    2024-01-03 lunch -20.25 #food
+    2024-02-01 salary 100.00 #income
+
+    $ python -m ledger_cli two-months.ledger summary
+    entries: 2
+    months: 2 (2024-01 to 2024-02)
+    balance: $79.75
+    average monthly spending: $10.12
+
+Spending is $20.25 in January and $0.00 in February, so the average is $10.125, which should be
+shown as $10.13 (we round half-cent amounts up, like our bank does). It is not always wrong:
+with $20.75 in January the average is correctly shown as $10.38.
+
+Probably the same problem: an imported line with a sub-cent amount, `2024-03-01 fuel -30.125
+#car`, shows up as -$30.12 in `register` and `balance` instead of -$30.13."""
+expected_behavior = "Amounts are rounded to cents half-up (ties away from zero) everywhere: averages in the summary, parsed amounts with more than two decimals, and all report output."
+visible_failing = []

@@ -1,0 +1,13 @@
+diff --git a/algokit/graphs.py b/algokit/graphs.py
+index 2612034..7840fae 100644
+--- a/algokit/graphs.py
++++ b/algokit/graphs.py
+@@ -81,7 +81,7 @@ def dijkstra(graph: WeightedGraph, source: Node) -> Tuple[Dict[Node, float], Dic
+             if weight < 0:
+                 raise ValueError(f"negative edge weight {weight} on {node!r} -> {neighbour!r}")
+             candidate = dist + weight
+-            if neighbour not in distances or candidate < distances[neighbour]:
++            if neighbour not in distances:
+                 distances[neighbour] = candidate
+                 predecessors[neighbour] = node
+                 heapq.heappush(heap, (candidate, next(tie), neighbour))

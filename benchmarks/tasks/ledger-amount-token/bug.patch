@@ -1,0 +1,59 @@
+diff --git a/ledger_cli/parser.py b/ledger_cli/parser.py
+index edf0439..3d3a968 100644
+--- a/ledger_cli/parser.py
++++ b/ledger_cli/parser.py
+@@ -19,9 +19,9 @@ import re
+ from dataclasses import dataclass
+ from datetime import date
+ from decimal import Decimal
+-from typing import List, Tuple
++from typing import List, Optional, Tuple
+ 
+-from .money import parse_amount
++from .money import AMOUNT_PATTERN, parse_amount
+ 
+ DEFAULT_ACCOUNT = "checking"
+ UNCATEGORIZED = "uncategorized"
+@@ -68,6 +68,10 @@ def _parse_tag(token: str) -> str:
+     return tag
+ 
+ 
++def _is_amount(token: str) -> bool:
++    return bool(AMOUNT_PATTERN.match(token)) and any(ch.isdigit() for ch in token)
++
++
+ def parse_line(line: str, line_no: int = 0) -> Entry:
+     """Parse one transaction line into an :class:`Entry`."""
+     content = line.split(";", 1)[0].strip()
+@@ -81,7 +85,8 @@ def parse_line(line: str, line_no: int = 0) -> Entry:
+ 
+     tags: List[str] = []
+     account = DEFAULT_ACCOUNT
+-    body: List[str] = []
++    amount: Optional[Decimal] = None
++    words: List[str] = []
+     for token in tokens[1:]:
+         if token.startswith("#"):
+             try:
+@@ -92,16 +97,14 @@ def parse_line(line: str, line_no: int = 0) -> Entry:
+                 tags.append(tag)
+         elif token.startswith("@") and len(token) > 1:
+             account = token[1:].lower()
++        elif amount is None and _is_amount(token):
++            amount = parse_amount(token)
+         else:
+-            body.append(token)
++            words.append(token)
+ 
+-    if not body:
++    if amount is None:
+         raise ParseError("missing amount", line_no)
+-    try:
+-        amount = parse_amount(body[-1])
+-    except ValueError:
+-        raise ParseError(f"invalid amount {body[-1]!r}", line_no) from None
+-    description = " ".join(body[:-1]) or "(no description)"
++    description = " ".join(words) or "(no description)"
+     return Entry(when, description, amount, tuple(tags), account)
+ 
+ 

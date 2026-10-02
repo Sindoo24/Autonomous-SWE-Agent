@@ -1,0 +1,24 @@
+id = "eventlog-offset-timestamps"
+repo = "eventlog"
+category = "data_processing_bug"
+difficulty = "hard"
+injection = "squashed"
+issue = """Session counts and time ranges in the pipeline report are wrong when services log with a
+UTC offset instead of `Z`.
+
+Our web tier logs in CEST (+02:00) while the API logs in UTC. One user's activity:
+
+    lines = [
+        "2024-05-01T14:00:00+02:00 INFO [web] login user=carol",
+        "2024-05-01T12:10:00Z INFO [api] view user=carol",
+        "2024-05-01T12:20:00Z INFO [api] logout user=carol",
+    ]
+    >>> r = run_pipeline(lines)
+    >>> r["sessions"]["count"], r["first"], r["last"]
+    (2, datetime(2024, 5, 1, 12, 10, tzinfo=utc), datetime(2024, 5, 1, 14, 0, tzinfo=utc))
+
+14:00+02:00 is 12:00 UTC, so this is one 20-minute session: expected count 1, first 12:00 UTC
+and last 12:20 UTC. The per-minute buckets are shifted the same way. Logs that only use `Z`
+are fine."""
+expected_behavior = """Timestamps with an explicit offset (and naive timestamps under a non-UTC default_tz) are converted to the same instant in UTC, so ordering, sessions and buckets across mixed offsets are correct."""
+visible_failing = []

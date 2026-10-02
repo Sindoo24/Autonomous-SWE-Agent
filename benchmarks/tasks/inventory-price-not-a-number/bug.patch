@@ -1,0 +1,13 @@
+diff --git a/inventory_service/validation.py b/inventory_service/validation.py
+index e0a0153..1ebd6f0 100644
+--- a/inventory_service/validation.py
++++ b/inventory_service/validation.py
+@@ -47,8 +47,6 @@ def parse_price(value: Any, field: str = "price") -> Decimal:
+         price = Decimal(str(value).strip())
+     except InvalidOperation:
+         raise ValidationError(field, f"{field} is not a number: {value!r}") from None
+-    if not price.is_finite():
+-        raise ValidationError(field, f"{field} must be a finite amount")
+     if price < 0 or price > MAX_PRICE:
+         raise ValidationError(field, f"{field} must be between 0 and {MAX_PRICE}")
+     if price != price.quantize(Decimal("0.01")):

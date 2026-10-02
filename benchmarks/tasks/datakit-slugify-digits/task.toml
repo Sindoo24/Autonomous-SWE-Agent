@@ -1,0 +1,10 @@
+id = "datakit-slugify-digits"
+repo = "datakit"
+category = "regression_bug"
+difficulty = "medium"
+injection = "commit"  # bug arrives as its own commit, visible in git history
+commit_message = "Simplify slugify: collapse all non-letter runs with one regex"
+issue = """Regression: since the latest refactor slugify() drops digits.
+slugify("Release 2024 Notes") now returns "release-notes"; CI test test_slugify_keeps_digits fails."""
+expected_behavior = "Digits are kept in slugs; everything else unchanged."
+visible_failing = ["tests/test_text.py::test_slugify_keeps_digits"]

@@ -1,0 +1,13 @@
+diff --git a/eventlog/parse.py b/eventlog/parse.py
+index 3bec381..b4bd69e 100644
+--- a/eventlog/parse.py
++++ b/eventlog/parse.py
+@@ -47,7 +47,7 @@ def parse_timestamp(text: str, default_tz: tzinfo = timezone.utc) -> datetime:
+         raise ParseError(f"bad timestamp: {text!r}") from None
+     if parsed.tzinfo is None:
+         parsed = parsed.replace(tzinfo=default_tz)
+-    return parsed.astimezone(timezone.utc)
++    return parsed.replace(tzinfo=timezone.utc)
+ 
+ 
+ def parse_duration(text: str) -> float:

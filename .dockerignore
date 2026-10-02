@@ -1,0 +1,16 @@
+# Build context hygiene: never send VCS data, local state, secrets or caches to the daemon.
+.git
+.github
+.data
+.env
+.env.*
+!.env.example
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/.venv
+**/*.egg-info
+backend/tests
+frontend/Dockerfile

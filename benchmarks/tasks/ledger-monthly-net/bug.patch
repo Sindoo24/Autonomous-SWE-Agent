@@ -1,0 +1,13 @@
+diff --git a/ledger_cli/report.py b/ledger_cli/report.py
+index 5b5ea8a..ba10709 100644
+--- a/ledger_cli/report.py
++++ b/ledger_cli/report.py
+@@ -35,7 +35,7 @@ def monthly_summary(ledger: Ledger) -> List[MonthSummary]:
+     for month in ledger.months():
+         month_income = quantize(income[month])
+         month_expenses = quantize(expenses[month])
+-        rows.append(MonthSummary(month, month_income, month_expenses, month_income - month_expenses))
++        rows.append(MonthSummary(month, month_income, month_expenses, month_income + month_expenses))
+     return rows
+ 
+ 

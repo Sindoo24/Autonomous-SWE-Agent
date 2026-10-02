@@ -1,0 +1,13 @@
+diff --git a/algokit/sequences.py b/algokit/sequences.py
+index a23e7aa..3cac17f 100644
+--- a/algokit/sequences.py
++++ b/algokit/sequences.py
+@@ -52,7 +52,7 @@ def max_window_sum(values: Sequence[float], k: int) -> float:
+     """
+     if k <= 0:
+         raise ValueError("window size must be positive")
+-    if k > len(values):
++    if k >= len(values):
+         raise ValueError(f"window size {k} exceeds sequence length {len(values)}")
+     window = sum(values[:k])
+     best = window

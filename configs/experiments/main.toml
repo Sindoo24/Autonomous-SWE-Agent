@@ -1,0 +1,16 @@
+# The headline comparison: the agent (C) vs the two baselines (A, B) on all 25 tasks, 3 repeats.
+# 225 runs. On a 6 GB GPU with a 7B model expect this to take a long time (hours per repeat);
+# start with configs/experiments/smoke.toml.
+name = "main"
+tasks = "all"
+repeats = 3
+seeds = [7, 8, 9]
+
+[[systems]]
+system = "agent"
+
+[[systems]]
+system = "baseline_react"
+
+[[systems]]
+system = "baseline_single_shot"

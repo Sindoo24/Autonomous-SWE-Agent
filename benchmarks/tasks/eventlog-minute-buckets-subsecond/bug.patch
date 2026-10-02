@@ -1,0 +1,13 @@
+diff --git a/eventlog/aggregate.py b/eventlog/aggregate.py
+index c06be9b..a74600c 100644
+--- a/eventlog/aggregate.py
++++ b/eventlog/aggregate.py
+@@ -18,7 +18,7 @@ def count_by_level(events: Iterable[Event]) -> dict[str, int]:
+ 
+ def minute_of(ts: datetime) -> datetime:
+     """The start of the minute containing ``ts``."""
+-    return ts.replace(second=0, microsecond=0)
++    return ts.replace(second=0)
+ 
+ 
+ def per_minute(events: Iterable[Event]) -> dict[datetime, int]:

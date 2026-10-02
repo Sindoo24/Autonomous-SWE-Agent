@@ -1,0 +1,11 @@
+--- a/datakit/intervals.py
++++ b/datakit/intervals.py
+@@ -16,7 +16,7 @@
+     for start, end in ordered:
+         if start > end:
+             raise ValueError(f"invalid interval: {(start, end)}")
+-        if merged and start <= merged[-1][1]:
++        if merged and start < merged[-1][1]:
+             last_start, last_end = merged[-1]
+             merged[-1] = (last_start, max(last_end, end))
+         else:

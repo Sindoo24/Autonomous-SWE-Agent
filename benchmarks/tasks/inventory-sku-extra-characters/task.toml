@@ -1,0 +1,16 @@
+id = "inventory-sku-extra-characters"
+repo = "inventory_api"
+category = "validation_bug"
+difficulty = "easy"
+injection = "squashed"
+issue = """POST /products accepts malformed SKUs that have extra characters after the item number.
+
+    >>> api.post_products({"sku": "TLS-00421", "name": "Wrench", "price": "9.00"})
+    (201, {'sku': 'TLS-00421', ...})
+    >>> api.post_products({"sku": "GRD-1234-B", "name": "Rake", "price": "15.00"})
+    (201, {'sku': 'GRD-1234-B', ...})
+
+SKUs must be 3-5 letters, a dash and exactly four digits (e.g. TLS-0042). Both requests should be
+rejected with 422 and `field == "sku"`."""
+expected_behavior = """SKUs with anything beyond the four-digit item number are rejected with a 422 validation error on the sku field."""
+visible_failing = []

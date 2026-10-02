@@ -1,0 +1,17 @@
+id = "eventlog-min-level-regression"
+repo = "eventlog"
+category = "regression_bug"
+difficulty = "medium"
+injection = "commit"
+commit_message = "Compare canonical level names directly in min_level filter"
+issue = """Since the latest commit, filtering by minimum level returns the wrong events.
+
+    >>> run_pipeline(lines, min_level="warning")["levels"]
+    {'WARNING': 1}
+
+The log contains one WARNING and one ERROR line; ERROR is more severe than WARNING, so it used
+to be included: expected {'WARNING': 1, 'ERROR': 1}. With min_level="error" the report now even
+includes INFO lines. `tests/test_processing.py::test_min_level_keeps_more_severe_levels` started
+failing with the same change."""
+expected_behavior = """min_level(x) keeps exactly the events whose severity is at least that of x (DEBUG < INFO < WARNING < ERROR < CRITICAL), accepting aliases such as warn/err."""
+visible_failing = ["tests/test_processing.py::test_min_level_keeps_more_severe_levels"]

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="1" failures="2" skipped="1" tests="6" time="0.047" timestamp="2026-09-27T16:52:39.030779+00:00" hostname="vm"><testcase classname="" name="tests.test_b" file="tests/test_b.py" time="0.000"><error message="collection failure">ImportError while importing test module '/tmp/claude-0/-home-claude/d951ef80-8356-56be-8795-785b3d4715d0/scratchpad/jx/tests/test_b.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_b.py:1: in &lt;module&gt;
+    import nosuchmod
+E   ModuleNotFoundError: No module named 'nosuchmod'</error></testcase><testcase classname="tests.test_a.TestK" name="test_a" file="tests/test_a.py" line="2" time="0.001"><failure message="assert 1 == 2">self = &lt;test_a.TestK object at 0x7fa2498eb690&gt;
+
+    def test_a(self):
+&gt;       assert 1 == 2
+E       assert 1 == 2
+
+tests/test_a.py:4: AssertionError</failure></testcase><testcase classname="tests.test_a.TestK" name="test_p[1]" file="tests/test_a.py" line="4" time="0.000" /><testcase classname="tests.test_a.TestK" name="test_p[2]" file="tests/test_a.py" line="4" time="0.000" /><testcase classname="tests.test_a" name="test_err" file="tests/test_a.py" line="7" time="0.002"><failure message="ValueError: boom">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-18/test_err0')
+
+    def test_err(tmp_path):
+&gt;       raise ValueError("boom")
+E       ValueError: boom
+
+tests/test_a.py:9: ValueError</failure></testcase><testcase classname="tests.test_a" name="test_s" file="tests/test_a.py" line="9" time="0.000"><skipped type="pytest.skip" message="unconditional skip">/tmp/claude-0/-home-claude/d951ef80-8356-56be-8795-785b3d4715d0/scratchpad/jx/tests/test_a.py:10: unconditional skip</skipped></testcase></testsuite></testsuites>

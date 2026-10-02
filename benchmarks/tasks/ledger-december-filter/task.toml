@@ -1,0 +1,21 @@
+id = "ledger-december-filter"
+repo = "ledger_cli"
+category = "edge_case"
+difficulty = "medium"
+injection = "squashed"
+issue = """`--month` finds nothing for December.
+
+    2024-11-28 groceries -50.00 #food
+    2024-12-24 gifts -300.00 #gifts
+    2024-12-31 party -45.00 #fun
+
+    $ python -m ledger_cli 2024.ledger balance --month 2024-12
+    account  balance
+    -------  -------
+    total      $0.00
+
+Expected the checking account with -$345.00 and a total of -$345.00. `--month 2024-11` and every
+other month work; only December comes back empty (same for `categories --month 2024-12`,
+`register --month 2024-12`, ...)."""
+expected_behavior = "Month filtering covers the full calendar month for every month including December (Dec 1 to Dec 31 inclusive); month_bounds returns the correct first/last day."
+visible_failing = []

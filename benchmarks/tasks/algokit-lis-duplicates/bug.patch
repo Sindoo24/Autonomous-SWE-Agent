@@ -1,0 +1,13 @@
+diff --git a/algokit/search.py b/algokit/search.py
+index 0e3ae92..3b4d12e 100644
+--- a/algokit/search.py
++++ b/algokit/search.py
+@@ -37,7 +37,7 @@ def lower_bound(
+     key = key or _identity
+     while lo < hi:
+         mid = (lo + hi) // 2
+-        if key(seq[mid]) < target:
++        if key(seq[mid]) <= target:
+             lo = mid + 1
+         else:
+             hi = mid

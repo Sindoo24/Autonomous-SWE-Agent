@@ -1,0 +1,44 @@
+name: ci
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: swe
+          POSTGRES_PASSWORD: swe
+          POSTGRES_DB: swe_agent_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U swe -d swe_agent_test"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      # disposable CI database (wiped by the test suite)
+      SWE_TEST_DATABASE_URL: postgresql://swe:swe@localhost:5432/swe_agent_test
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: sudo apt-get update && sudo apt-get install -y ripgrep
+      - run: pip install -e ".[dev,ui,charts]"
+      - run: ruff check swe_agent tests ../frontend && ruff format --check swe_agent tests ../frontend
+      - run: mypy
+      # Docker is available on GitHub-hosted runners, so the `docker`-marked tests run too
+      # (the sandbox base image python:3.12-slim is pulled on first use).
+      - run: pytest -q --cov=swe_agent --cov-report=term
+
+  images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f backend/Dockerfile --target api -t swe-agent-api .
+      - run: docker build -f backend/Dockerfile --target worker -t swe-agent-worker .
+      - run: docker build -t swe-agent-frontend frontend
+      - run: SWE_API_KEY=ci SWE_DATA_DIR=/tmp/swe-data docker compose config --quiet

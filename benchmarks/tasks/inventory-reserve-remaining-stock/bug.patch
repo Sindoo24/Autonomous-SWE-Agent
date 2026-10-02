@@ -1,0 +1,13 @@
+diff --git a/inventory_service/store.py b/inventory_service/store.py
+index ffefde4..e41ce99 100644
+--- a/inventory_service/store.py
++++ b/inventory_service/store.py
+@@ -73,7 +73,7 @@ class InventoryStore:
+     def reserve(self, sku: str, quantity: int, customer: str) -> Reservation:
+         """Hold ``quantity`` units of ``sku`` for ``customer``."""
+         product = self.get_product(sku)
+-        if quantity > product.available:
++        if quantity >= product.available:
+             raise InsufficientStockError(sku, quantity, product.available)
+         product.reserved += quantity
+         reservation = Reservation(

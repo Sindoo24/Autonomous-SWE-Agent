@@ -1,0 +1,16 @@
+id = "inventory-price-not-a-number"
+repo = "inventory_api"
+category = "validation_bug"
+difficulty = "medium"
+injection = "squashed"
+issue = """Sending "NaN" as a price makes the service crash with HTTP 500 instead of a validation error.
+
+    >>> api.post_products({"sku": "TLS-0001", "name": "Hammer", "price": "NaN"})
+    (500, {'error': 'internal_server_error'})
+    >>> api.list_products({"min_price": "nan"})
+    (500, {'error': 'internal_server_error'})
+
+The same happens for PATCH /products/{sku} with {"price": "NaN"}. A garbage price like "abc" is
+correctly answered with 422, so "NaN" should be too (field "price" / "min_price")."""
+expected_behavior = """Non-finite prices (NaN, sNaN, Infinity) are rejected with 422 on the offending field wherever prices are parsed; valid prices are unchanged."""
+visible_failing = []

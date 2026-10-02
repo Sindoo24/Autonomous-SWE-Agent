@@ -1,0 +1,22 @@
+diff --git a/ledger_cli/money.py b/ledger_cli/money.py
+index 3051cf3..4b4d0a4 100644
+--- a/ledger_cli/money.py
++++ b/ledger_cli/money.py
+@@ -7,7 +7,7 @@ All amounts are :class:`decimal.Decimal` values rounded to whole cents. Rounding
+ from __future__ import annotations
+ 
+ import re
+-from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
++from decimal import ROUND_HALF_EVEN, Decimal, InvalidOperation
+ from typing import Iterable, List, Union
+ 
+ CENT = Decimal("0.01")
+@@ -26,7 +26,7 @@ def quantize(amount: Number) -> Decimal:
+     >>> quantize(Decimal("2.345"))
+     Decimal('2.35')
+     """
+-    return Decimal(amount).quantize(CENT, rounding=ROUND_HALF_UP)
++    return Decimal(amount).quantize(CENT, rounding=ROUND_HALF_EVEN)
+ 
+ 
+ def parse_amount(text: str) -> Decimal:

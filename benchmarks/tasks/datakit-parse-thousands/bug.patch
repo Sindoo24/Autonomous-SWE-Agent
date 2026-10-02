@@ -1,0 +1,10 @@
+--- a/datakit/parsing.py
++++ b/datakit/parsing.py
+@@ -22,7 +22,6 @@
+     if negative:
+         raw = raw[1:-1].strip()
+     raw = raw.lstrip("$€£").strip()
+-    raw = raw.replace(",", "")
+     try:
+         value = Decimal(raw)
+     except InvalidOperation as exc:

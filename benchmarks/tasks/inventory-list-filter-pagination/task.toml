@@ -1,0 +1,18 @@
+id = "inventory-list-filter-pagination"
+repo = "inventory_api"
+category = "api_bug"
+difficulty = "medium"
+injection = "squashed"
+issue = """GET /products returns short pages and a wrong `total` when a filter is combined with paging.
+
+With six products, three of them in category "tools" (TLS-0001, TLS-0002, TLS-0003) and three in
+"garden" (GRD-0001..GRD-0003):
+
+    >>> api.list_products({"category": "tools", "page_size": "2"})
+    (200, {'items': [], 'total': 6, 'page': 1, 'page_size': 2, 'pages': 3})
+
+Expected the first two tools (TLS-0001, TLS-0002) with total 3 and pages 2, and page 2 should
+contain TLS-0003. Without a filter, paging works; without paging (the default page size is
+large) filtering works."""
+expected_behavior = """Filters (category, in_stock, price range, tag) select the matching products first; sort, total, pages and the page window then apply to the matching set only."""
+visible_failing = []

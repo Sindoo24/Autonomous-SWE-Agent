@@ -1,0 +1,9 @@
+id = "users-list-limit"
+repo = "users_api"
+category = "edge_case"
+difficulty = "easy"
+injection = "squashed"
+issue = """GET /users?limit=N returns one user fewer than requested even when more users exist.
+For example with 3 users, list_users(limit=2) returns a single item."""
+expected_behavior = "list_users returns min(limit, remaining) items starting at offset."
+visible_failing = []

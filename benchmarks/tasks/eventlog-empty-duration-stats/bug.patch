@@ -1,0 +1,13 @@
+diff --git a/eventlog/aggregate.py b/eventlog/aggregate.py
+index c06be9b..c515e6d 100644
+--- a/eventlog/aggregate.py
++++ b/eventlog/aggregate.py
+@@ -37,8 +37,6 @@ def percentile(values: Sequence[float], pct: float) -> Optional[float]:
+     """
+     if not 0 <= pct <= 100:
+         raise ValueError("pct must be between 0 and 100")
+-    if not values:
+-        return None
+     ordered = sorted(values)
+     rank = (len(ordered) - 1) * pct / 100
+     lo = math.floor(rank)

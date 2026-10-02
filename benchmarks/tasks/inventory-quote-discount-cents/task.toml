@@ -1,0 +1,19 @@
+id = "inventory-quote-discount-cents"
+repo = "inventory_api"
+category = "api_bug"
+difficulty = "hard"
+injection = "squashed"
+issue = """POST /quotes reports the wrong discount (and therefore wrong tax and total) for some orders.
+
+A product priced 3.35 ordered 60 times qualifies for the 5% volume tier:
+
+    >>> api.post_products({"sku": "FST-0001", "name": "Wood screws", "price": "3.35", "on_hand": 500})
+    >>> api.post_quote({"items": [{"sku": "FST-0001", "quantity": 60}]})
+    (200, {'lines': [{... 'subtotal': '201.00', 'discount': '10.20', 'net': '190.80'}],
+           'subtotal': '201.00', 'discount': '10.20', 'tax': '34.34', 'total': '225.14'})
+
+5% of 201.00 is 10.05, so the line should read discount 10.05 / net 190.95, tax 34.37 and total
+225.32. The same happens with promotion codes (0.99 x 10 with STAFF20 gives a discount of 2.00
+instead of 1.98). Quotes for round prices such as 10.00 look correct."""
+expected_behavior = """Each quote line's discount is the percentage of the line subtotal, rounded half-up to cents; tax and total follow from the corrected discount."""
+visible_failing = []

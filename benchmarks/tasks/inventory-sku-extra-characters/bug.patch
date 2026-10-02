@@ -1,0 +1,13 @@
+diff --git a/inventory_service/validation.py b/inventory_service/validation.py
+index e0a0153..af1d3c4 100644
+--- a/inventory_service/validation.py
++++ b/inventory_service/validation.py
+@@ -9,7 +9,7 @@ from typing import Any
+ from inventory_service.errors import ValidationError
+ 
+ #: Three to five letter family code, a dash and a four digit item number, e.g. ``TLS-0042``.
+-SKU_RE = re.compile(r"^[A-Z]{3,5}-\d{4}$")
++SKU_RE = re.compile(r"^[A-Z]{3,5}-\d{4}")
+ MAX_QUANTITY = 10_000
+ MAX_PRICE = Decimal("100000.00")
+ PRODUCT_FIELDS = {"sku", "name", "category", "price", "on_hand", "tags"}

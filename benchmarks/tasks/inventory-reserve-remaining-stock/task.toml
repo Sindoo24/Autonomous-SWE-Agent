@@ -1,0 +1,16 @@
+id = "inventory-reserve-remaining-stock"
+repo = "inventory_api"
+category = "logic_bug"
+difficulty = "easy"
+injection = "squashed"
+issue = """Reserving the last units of a product fails even though they are available.
+
+    >>> api.post_products({"sku": "PNT-0001", "name": "Wall Paint", "price": "31.99", "on_hand": 7})
+    >>> api.post_reservation("PNT-0001", {"quantity": 7, "customer": "ACME Ltd"})
+    (409, {'error': 'insufficient_stock', 'detail': 'PNT-0001: requested 7, only 7 available',
+           'sku': 'PNT-0001', 'requested': 7, 'available': 7})
+
+The error message itself says 7 are available. Reserving 6 works, but then reserving the last
+1 fails the same way. Expected the reservation to succeed and `available` to drop to 0."""
+expected_behavior = """A reservation for exactly the available quantity succeeds; only requests above the available quantity get 409 insufficient_stock."""
+visible_failing = []

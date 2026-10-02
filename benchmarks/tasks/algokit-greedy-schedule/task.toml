@@ -1,0 +1,16 @@
+id = "algokit-greedy-schedule"
+repo = "algokit"
+category = "algorithmic_bug"
+difficulty = "easy"
+injection = "squashed"
+issue = """max_non_overlapping() does not return a maximum set of meetings.
+
+    >>> from algokit.scheduling import max_non_overlapping
+    >>> max_non_overlapping([(1, 10), (2, 3), (4, 5)])
+    [(1, 10)]
+
+Only one meeting is selected, but (2, 3) and (4, 5) do not overlap, so the expected result is
+[(2, 3), (4, 5)]. The docstring example also disagrees with what the function returns:
+max_non_overlapping([(1, 4), (2, 3), (3, 5)]) gives [(1, 4)] instead of [(2, 3), (3, 5)]."""
+expected_behavior = "max_non_overlapping returns a largest possible set of pairwise non-overlapping (half-open) intervals, in chronological order."
+visible_failing = []

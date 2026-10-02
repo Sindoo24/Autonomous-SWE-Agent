@@ -1,0 +1,25 @@
+# Which parts of the agent matter (README: Evaluation, H3 and H4). 5 variants x 25 tasks x 3 repeats.
+name = "ablations"
+tasks = "all"
+repeats = 3
+seeds = [7, 8, 9]
+
+[[systems]]
+system = "agent"
+variant = "full"
+
+[[systems]]
+system = "agent"
+variant = "no_reproduce"
+
+[[systems]]
+system = "agent"
+variant = "generic_retry"
+
+[[systems]]
+system = "agent"
+variant = "no_candidate_seeding"
+
+[[systems]]
+system = "agent"
+variant = "single_iteration"

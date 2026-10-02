@@ -1,0 +1,5 @@
+# Always check out with LF line endings (Windows checkouts with core.autocrlf would otherwise
+# convert them and break the benchmark's bug.patch files).
+* text=auto eol=lf
+*.patch text eol=lf
+*.png binary

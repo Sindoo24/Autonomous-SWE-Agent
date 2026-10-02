@@ -1,0 +1,13 @@
+diff --git a/inventory_service/api.py b/inventory_service/api.py
+index 5104c2f..510c4d3 100644
+--- a/inventory_service/api.py
++++ b/inventory_service/api.py
+@@ -181,7 +181,7 @@ def _create_reservation(sku: str, payload: dict[str, Any]) -> tuple[int, dict[st
+     quantity = validate_quantity(payload.get("quantity"))
+     customer = validate_name(payload.get("customer"), "customer")
+     reservation = store.reserve(validate_sku(sku), quantity, customer)
+-    return 201, reservation.to_dict()
++    return 200, reservation.to_dict()
+ 
+ 
+ def post_reservation(sku: str, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
