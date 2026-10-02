@@ -7,68 +7,70 @@
 [![Docker](https://img.shields.io/badge/sandbox-Docker-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow)](LICENSE)
 
-An autonomous agent that takes a Python repository and a bug report, and returns a minimal patch together with machine-checked evidence that the patch works.
+An agent that takes a Python repository and a bug report and returns a minimal patch, together
+with test evidence, computed in an isolated sandbox, of whether the patch works.
+
+## Contents
+
+- [Overview](#overview)
+- [The problem](#the-problem)
+- [Architecture](#architecture)
+- [LangGraph workflow](#langgraph-workflow)
+- [Repository structure](#repository-structure)
+- [Evaluation](#evaluation)
+  
 
 ---
 
 ## Overview
 
-Most LLM coding tools stop once the model has produced a diff. This project is built around the question that comes next: **how do we know the patch is correct?**
-
 Given a repository and an issue description, the agent:
 
-1. **Explores** the codebase with read-only tools and identifies the code responsible for the bug.
-2. **Hypothesizes** about the root cause and produces a structured plan.
-3. **Reproduces** the bug by writing a test that must fail on the unpatched code.
+1. **Explores** the code with read-only tools and locates the code responsible for the bug.
+2. **Hypothesizes** root causes and writes a structured plan.
+3. **Reproduces** the bug with a test that must fail on the unpatched code.
 4. **Implements** a minimal fix with exact search-and-replace edits.
-5. **Verifies** the fix by running the test suite in an isolated Docker sandbox.
+5. **Tests** the fix by running the suite in a hardened Docker sandbox.
 6. **Recovers** from failures by classifying them and re-planning, re-exploring or stopping.
-7. **Waits for human approval** before exporting the patch.
+7. **Waits for a human** to approve or reject the patch before exporting it.
 
-The verdict on every patch is computed from test results, never from the model's own claims. The agent runs on locally hosted models (Ollama or any OpenAI-compatible server such as vLLM). By default it uses `qwen2.5-coder:7b`, which fits on a 6 GB GPU.
+The verdict on every patch (VERIFIED or NOT VERIFIED, with a level from 1 to 5) is computed from
+test runs and static checks, never from the model's own claims. The agent runs on locally hosted
+models through Ollama or any OpenAI-compatible server (vLLM, llama.cpp, LM Studio). It is exposed
+through a CLI, a versioned REST API with a PostgreSQL job queue and workers, and a Streamlit UI.
 
-### Key features
+## The problem
 
-| Area | Capability |
-|---|---|
-| Correctness | Fail-to-pass evidence, regression detection and lint checks, combined into five verification levels |
-| Recovery | Failure classification, root-cause analysis, escalation, rollback, oscillation detection |
-| Safety | Hardened Docker sandbox; tools restricted per stage; tests and CI files read-only to the model |
-| Human oversight | Durable pause before export; approve, reject or request a retry with feedback |
-| Backend | FastAPI service, PostgreSQL job queue, workers that resume a crashed run from its checkpoint |
-| Observability | Full trajectory of every step, OpenTelemetry traces, metrics as SQL views |
-| Evaluation | 25-task benchmark with hidden tests, two baseline systems, four ablations |
-| Interface | CLI, REST API and a Streamlit web UI |
+Most LLM coding tools stop when the model has produced a diff. The hard part comes next: is the
+patch correct, did it break anything, and did the model quietly weaken the tests to get a green
+run? Small local models make this worse: they produce malformed diffs, loop on the same failing
+approach, and are easily misled by text inside the repository.
 
----
+This project treats those as the main design constraints:
+
+- Test execution is a deterministic graph step; the model cannot skip or cherry-pick tests.
+- Tests, CI and build files are read-only to the model, and test-tampering patterns are rejected.
+- A fix only counts as VERIFIED with fail-to-pass evidence and no regressions.
+- Repository content is untrusted input, and untrusted code only runs inside the sandbox.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    UI["Streamlit UI"] -->|HTTP| API["FastAPI service"]
-    CLI["CLI"] --> AG
-    API --> DB[("PostgreSQL<br/>tasks · runs · jobs<br/>events · checkpoints")]
-    W["Worker(s)"] -->|"claim job<br/>(SKIP LOCKED)"| DB
-    W --> AG["LangGraph agent"]
-    AG -->|"checkpoints, events"| DB
-    AG --> LLM["Model server<br/>Ollama / vLLM"]
-    AG --> TOOLS["Typed tools<br/>read · search · edit · git"]
-    AG --> SB["Docker sandbox<br/>pytest · ruff"]
+    UI["Streamlit UI"] -->|HTTP /api/v1| API["FastAPI<br/>routes → services → db"]
+    CLI["CLI<br/>swe-agent"] --> RT
+    API --> DB[("PostgreSQL<br/>tasks · runs · jobs · events<br/>checkpoints · metric views")]
+    W["Worker(s)"] -->|"claim job<br/>(FOR UPDATE SKIP LOCKED)"| DB
+    W --> RT["Agent runtime"]
+    RT --> G["LangGraph agent"]
+    G -->|checkpoints, events| DB
+    G --> GW["Model gateway"] --> LLM["Ollama / vLLM"]
+    G --> EX["Tool executor"] --> WS["Workspace<br/>(isolated clone)"]
+    G --> SB["Sandbox service"] --> D["Docker<br/>pytest · ruff"]
 ```
 
-| Component | Responsibility |
-|---|---|
-| **LangGraph agent** (`graph/`) | Explicit state machine of 15 nodes with conditional routing; every transition is checkpointed |
-| **Model gateway** (`llm/`) | Provider abstraction for Ollama and OpenAI-compatible APIs; schema-constrained structured output with one repair retry |
-| **Tools** (`tools/`) | Typed, policy-checked tools: file reading, code search, symbol lookup, git history, exact-match editing |
-| **Sandbox** (`sandbox/`) | Runs tests in containers with no network, a read-only filesystem, an unprivileged user and resource limits |
-| **Verification** (`verification/`) | Patch validation, failure classification and computation of the verification level |
-| **API and worker** (`api/`, `worker/`) | The API records tasks and enqueues jobs; workers claim jobs, execute runs and heartbeat |
-| **Persistence** (`db/`) | PostgreSQL schema with Alembic migrations, the event store, and metric views |
-| **Evaluation** (`evaluation/`, `baselines/`) | Experiment runner, baseline systems, SQL metrics and report generation |
 
-### Agent workflow
+## LangGraph workflow
 
 ```mermaid
 flowchart TD
@@ -80,13 +82,13 @@ flowchart TD
     F --> G[reproduce]
     G --> H[implement]
     H --> I[validate_patch]
-    I -- rejected --> H
+    I -- rejected, attempts left --> H
     I -- accepted --> J[run_tests]
     J -- pass --> K[verify]
     J -- fail --> L[analyze_failure]
-    L -- code error --> H
-    L -- wrong approach --> F
-    L -- wrong location --> D
+    L -- syntax / import error --> H
+    L -- test failure / regression --> F
+    L -- repeated failure / wrong location --> D
     L -- unrecoverable --> Z[report_failure]
     K --> M[human_approval]
     M -- approved --> N[finalize]
@@ -94,204 +96,118 @@ flowchart TD
     M -- rejected --> Z
 ```
 
-| Stage | Description |
-|---|---|
-| `prepare_repo` | Clones the repository into an isolated workspace with git hooks disabled; builds a symbol index and ranks candidate files |
-| `baseline_tests` | Runs the existing tests on unmodified code to record which tests already fail |
-| `explore` | Read-only tool loop; every file and line range the model cites is checked to exist |
-| `hypothesize`, `plan` | Root-cause hypotheses backed by evidence, then a typed plan of changes |
-| `reproduce` | Writes a test that must fail on the unpatched code for the reason the issue describes |
-| `implement` | Applies exact search-and-replace edits; test files are read-only |
-| `validate_patch` | Checks syntax, patch size, test-tampering patterns and deviation from the plan |
-| `run_tests` | Runs the full test suite on a disposable snapshot inside the sandbox |
-| `analyze_failure` | Classifies the failure and routes the run back to implement, plan or explore, or stops it |
-| `human_approval` | Pauses the run durably until a reviewer approves or rejects the patch |
+| Node | Type | Output |
+|---|---|---|
+| `intake` | deterministic | Sanitised issue text |
+| `prepare_repo` | deterministic | Isolated clone, symbol index, repository summary, ranked candidate files |
+| `baseline_tests` | sandbox | Which tests pass and fail before any change |
+| `explore` | LLM tool loop (read-only) | Findings with evidence; cited file and line ranges are checked to exist |
+| `hypothesize` | LLM, structured | One to three root-cause hypotheses |
+| `plan` | LLM, structured | Files and changes, tests to run, risks, rollback strategy |
+| `reproduce` | LLM + sandbox | A test that fails on the unpatched code for the right reason |
+| `implement` | LLM tool loop (edit) | Search-and-replace edits, summary, root cause |
+| `validate_patch` | deterministic | Accept or reject (paths, syntax, size, tampering, plan deviation) |
+| `run_tests` | sandbox | Import check, then the full suite on a disposable snapshot |
+| `analyze_failure` | rules + LLM | Failure category and next route |
+| `verify` | deterministic + sandbox | Verification level and evidence |
+| `human_approval` | interrupt | Approve, reject, or reject with feedback and retry |
+| `finalize` / `report_failure` | deterministic | `report.json`, `final.patch` |
 
----
+Every node transition is checkpointed (`thread_id = run_id`), which enables the durable human
+approval pause, crash recovery and live inspection through the API. Checkpoint deserialisation
+is restricted to an allow-list of the project's state classes.
 
-## Verification levels
+**Failure handling.** `analyze_failure` applies deterministic checks first: unrecoverable
+failures, the iteration budget and repeated identical patches stop the run. Syntax and import
+errors go back to `implement`; test failures and regressions go back to `plan` with the pytest
+evidence. A repeated failure signature escalates one level (implement → plan → explore), and an
+LLM root-cause analysis can send the run back to `explore`, after resetting the workspace.
 
-Each patch receives a level computed only from test runs and static checks.
+**Verification levels.**
 
 | Level | Requirement |
 |:---:|---|
-| **L1** | The changed files parse, and the changed modules import inside the sandbox |
-| **L2** | L1, and a test that **failed before** the patch **passes after** it |
-| **L3** | L2, and **no regressions**: every test that passed before still passes |
-| **L4** | L3, and **no new lint findings** in the changed files (ruff) |
-| **L5** | L4, and user-supplied **acceptance tests**, never shown to the agent, pass |
+| L1 | Changed files parse; changed modules import in the sandbox |
+| L2 | L1, and a test that failed before the patch passes after it |
+| L3 | L2, and every test that passed before still passes |
+| L4 | L3, and no new lint findings in changed files (ruff `E9`, `F`) |
+| L5 | L4, and user-supplied acceptance tests pass (never visible to the agent) |
 
-A patch is reported as **VERIFIED** only at L3 or above. A run that cannot reproduce the bug is reported honestly as NOT VERIFIED, even if a patch was produced.
+A patch is VERIFIED only at L3 or above.
 
----
+## Repository structure
+
+```
+autonomous-swe-agent/
+├── backend/
+│   ├── swe_agent/
+│   │   ├── main.py            # FastAPI application factory
+│   │   ├── cli.py             # `swe-agent` command line
+│   │   ├── config.py          # settings from environment variables
+│   │   ├── api/               # router, dependencies, routes (health, tasks, runs, experiments)
+│   │   ├── services/          # task, run, experiment and health services
+│   │   ├── agents/            # graph, state, tool loop, runner, context, nodes/
+│   │   ├── tools/             # typed tools, registry, executor
+│   │   ├── llm/               # providers and model gateway
+│   │   ├── repository/        # workspace, path jail, symbols, search
+│   │   ├── sandbox/           # Docker runner, image builder, JUnit, lint
+│   │   ├── verification/      # patch validator, failure classifier, levels
+│   │   ├── prompts/           # templates, injection defences
+│   │   ├── schemas/           # graph state and API models
+│   │   ├── db/                # models, migrations, data access
+│   │   ├── worker/            # job worker
+│   │   ├── observability/     # logging, trajectory, artifacts, OpenTelemetry
+│   │   ├── evaluation/        # benchmark, baselines, experiments, metrics, reports
+│   │   └── core/              # budget, errors, ids
+│   ├── tests/                 # unit/, integration/, e2e/, security/, fixtures/
+│   ├── pyproject.toml
+│   └── Dockerfile
+├── frontend/                  # Streamlit UI: app.py, api/, components/, pages/
+├── benchmarks/                # repos/ (6 repositories), tasks/ (25 tasks)
+├── configs/                   # models/ (model presets), experiments/
+├── scripts/
+├── .github/workflows/ci.yml
+├── docker-compose.yml
+├── .env.example
+└── README.md
+```
+
+
 
 ## Evaluation
 
-### Benchmark
+The evaluation design (systems, metrics, hypotheses) was fixed before any experiment. This
+repository does not report results.
 
-25 tasks across six purpose-built Python repositories. Each task injects a bug into a clean repository and includes **held-out tests that the agent never sees**. A run succeeds only if every held-out test passes and no existing test breaks on a fresh copy of the repository. Every task has been validated: its held-out tests fail on the buggy code and pass with the reference fix.
-
-| Difficulty | Tasks |
-|---|:---:|
-| Easy | 10 |
-| Medium | 10 |
-| Hard (cause in a different module from the symptom) | 5 |
-
-| Category | Tasks |
-|---|:---:|
-| Algorithmic, logic, regression, edge case | 4 each |
-| API, validation, data processing | 3 each |
-
-### Systems compared
-
-All systems use the same model, sandbox, tool permissions and budget.
+A run succeeds when its final patch, applied to a fresh copy of the task, passes every held-out
+test (tests the system never sees) and breaks no visible test that passed on the buggy base. The
+system's own verdict is recorded separately and never used as ground truth.
 
 | System | Description |
 |---|---|
-| **Agent** | The full workflow described above |
-| **ReAct baseline** | A single free-form tool loop that can also run tests; no plan, reproduction or verification stage |
-| **Single-shot baseline** | The five most relevant files are retrieved and the model proposes a patch in one call |
+| **agent** | The full LangGraph workflow |
+| **baseline_react** | One tool loop with every tool, including `run_tests`; no plan, reproduction, classifier or verification gate |
+| **baseline_single_shot** | Top 5 ranked files, one model call returning edits; no tests, no retry |
 
-Ablations of the agent remove one component at a time: the reproduction step, failure classification, candidate-file ranking, and multiple iterations.
-
-### Metrics
-
-Every metric is defined as a SQL view over the recorded runs, so each reported number can be traced back to individual events.
+Ablations of the agent: `no_reproduce`, `generic_retry` (no failure classification),
+`no_candidate_seeding` and `single_iteration`. All systems share the model, sandbox, write
+policy, budget and held-out evaluation.
 
 | Metric | Definition |
 |---|---|
-| Task success rate | Runs whose final patch passes all held-out tests without regressions, divided by runs |
-| First-attempt success | Runs whose first patch already succeeds |
-| Held-out test pass rate | Held-out tests passed divided by held-out tests, across runs (partial credit) |
-| Recovery rate | Among runs whose first patch failed, the fraction that eventually succeeded |
-| Iterations | Mean number of patch iterations per run |
-| Latency | Median and 90th-percentile wall-clock time, split into model, tool and sandbox time |
-| Token usage | Input and output tokens as reported by the model server; never estimated |
-| Estimated cost | Tokens and GPU time multiplied by stated prices, with the assumptions shown |
-| Tool usage | Tool calls per run, by tool, including repeated identical calls |
-| Plan deviation rate | Share of patches that change files or symbols outside the plan |
-| Tamper attempts | Attempts to skip, weaken or edit tests, which are blocked and counted |
+| Success rate | Successful runs / scored runs |
+| First-attempt success | The first accepted patch alone succeeds |
+| Held-out test pass rate | Held-out tests passed / held-out tests (partial credit) |
+| Recovery rate | Among runs whose first patch failed, the fraction that succeeded |
+| Iterations, latency, tokens | Per run; tokens are provider-reported and never estimated |
+| Tool usage | Calls per tool, including repeated identical calls |
+| Plan deviation rate | Patches deviating from the plan (agent only) |
+| Reward-hacking attempts | Rejected test tampering and blocked writes to tests, CI or build files |
 
-Each configuration is run three times with different seeds, and the spread across repeats is reported. The hypotheses being tested were written down before any experiment ([`docs/evaluation.md`](docs/evaluation.md)).
+Metrics are SQL views over recorded runs. Each system–task pair runs three times with different
+seeds. Pre-registered hypotheses: the agent beats both baselines on success (H1) and ReAct on
+recovery (H2); the reproduction step (H3) and classified failure routing (H4) each improve
+success.
 
----
 
-## Quick start
 
-### Prerequisites
-
-- Python 3.11 or later, `git` and `ripgrep`
-- Docker
-- [Ollama](https://ollama.com) (or another OpenAI-compatible model server)
-- PostgreSQL 14 or later, only for the API, worker and web UI
-
-On Windows, use WSL2. A step-by-step guide is in [`docs/windows-setup.md`](docs/windows-setup.md).
-
-### 1. Install
-
-```bash
-git clone https://github.com/<your-username>/autonomous-swe-agent.git
-cd autonomous-swe-agent
-python -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev,ui,charts]"
-```
-
-### 2. Pull the model
-
-```bash
-ollama pull qwen2.5-coder:7b
-```
-
-### 3. Verify the setup
-
-```bash
-swe-agent sandbox check      # Docker is reachable and the sandbox image builds
-swe-agent bench validate     # all 25 benchmark tasks are valid
-pytest -q                    # run the test suite
-```
-
-### 4. Fix a bug
-
-```bash
-swe-agent --env-file configs/models/ollama-small.env run \
-  --repo tests/fixtures/repos/users_service \
-  --issue "POST /users returns HTTP 500 when the email field is missing. It should return 422."
-```
-
-The run stops before exporting anything and prints its verdict and evidence. To approve, or to reject with feedback and let the agent try again:
-
-```bash
-swe-agent --env-file configs/models/ollama-small.env approve <run_id>
-swe-agent --env-file configs/models/ollama-small.env reject <run_id> --feedback "..." --retry
-```
-
-The approved patch is written to `.data/artifacts/<task_id>/<run_id>/final.patch` and can be applied with `git apply`.
-
-### 5. Run the web UI (optional)
-
-```bash
-docker compose up -d postgres
-export SWE_DATABASE_URL=postgresql://swe:swe@localhost:5432/swe_agent
-swe-agent db upgrade
-
-swe-agent --env-file configs/models/ollama-small.env api       # http://127.0.0.1:8000/docs
-swe-agent --env-file configs/models/ollama-small.env worker
-streamlit run frontend/app.py                                  # http://localhost:8501
-```
-
-### 6. Run an evaluation (optional)
-
-```bash
-swe-agent --env-file configs/models/ollama-small.env experiment run configs/experiments/smoke.toml
-swe-agent experiment report <experiment_id>
-```
-
-### Model configuration
-
-| Profile | Models | Intended hardware |
-|---|---|---|
-| `configs/models/ollama-small.env` | `qwen2.5-coder:7b` for all stages | 6–8 GB GPU |
-| `configs/models/ollama-dev.env` | `qwen3:8b` for reasoning, `qwen2.5-coder:7b` for coding | GPU with memory for both models |
-| `configs/models/vllm-gpu.env` | `Qwen3-Coder-30B-A3B-Instruct` via vLLM | Dedicated GPU server |
-
-Any other model can be used by setting `MODEL_PROVIDER`, `MODEL_BASE_URL`, `MODEL_REASONING` and `MODEL_CODER`.
-
----
-
-## Project structure
-
-```
-src/swe_agent/
-  graph/          LangGraph state machine and nodes
-  llm/            model providers and gateway
-  tools/          typed tools and policy-checked executor
-  sandbox/        Docker sandbox and image builder
-  verification/   patch validation, failure classification, verification levels
-  api/            FastAPI application
-  worker/         job queue worker
-  db/             schema, migrations, data access
-  baselines/      ReAct and single-shot baseline systems
-  evaluation/     experiment runner, metrics, reports
-frontend/         Streamlit web UI
-benchmarks/       benchmark repositories and tasks
-configs/          model and experiment configurations
-docs/             design and setup documentation
-tests/            unit, integration, security, sandbox and backend tests
-```
-
----
-
-## Documentation
-
-- [Architecture](docs/architecture.md): system design, decisions and trade-offs
-- [Backend](docs/backend.md): API endpoints, job lifecycle, crash recovery, observability
-- [Evaluation](docs/evaluation.md): benchmark design, metric definitions, hypotheses
-- [Windows setup](docs/windows-setup.md): installation on WSL2 with Docker and Ollama
-- [Architecture decision records](docs/adr/)
-
----
-
-## License
-
-Released under the [MIT License](LICENSE).
